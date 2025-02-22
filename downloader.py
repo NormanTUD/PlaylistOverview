@@ -25,22 +25,21 @@ def parse_args():
 
 args = parse_args()
 
-def download_subtitles(video_id, langs):
+def download_subtitles(video_id, lang_str):
     """ Lädt Untertitel für ein YouTube-Video herunter und speichert sie in der Datenbank. """
-    lang_str = ",".join(langs)
 
     # yt-dlp Befehl zum Abrufen der Untertitel im JSON-Format
-    command = [
+    command_array = [
         "yt-dlp",
         f"https://www.youtube.com/watch?v={video_id}",
         "--write-auto-sub", "--skip-download",
-        "--sub-lang", lang_str,
+        "--sub-lang", str(lang_str),
         "--sub-format", "json3",
         "--print-json"
     ]
 
     try:
-        result = subprocess.run(command, capture_output=True, text=True, check=True)
+        result = subprocess.run(command_array, capture_output=True, text=True, check=True)
         video_data = json.loads(result.stdout)
 
         conn = sqlite3.connect(DB_NAME)
@@ -185,8 +184,6 @@ def save_playlist(playlist_url, videos):
             execute_with_retry(cur, "INSERT OR IGNORE INTO playlist_videos (playlist_id, video_id, last_updated) VALUES (?, ?, ?)",
                         (playlist_id, video_id, datetime.utcnow().isoformat()))
 
-            execute_with_retry(cur, "INSERT OR REPLACE INTO video_subtitles (id, lang, text) VALUES (?, ?, ?)", (video_id, lang, title))
-            
             progress.update(task, advance=1)
 
     conn.commit()
@@ -252,9 +249,9 @@ def main():
             random.shuffle(videos)
 
         for video_id, _ in videos:
-            langs = args.lang.split(",")  # Sprachen als Liste speichern
+            lang_str = args.lang.split(",")  # Sprachen als Liste speichern
 
-            download_subtitles(video_id, langs)
+            download_subtitles(video_id, lang_str)
 
             task = download_comments(video_id, progress)
 
