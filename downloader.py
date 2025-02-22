@@ -80,8 +80,11 @@ def get_playlist_videos(playlist_url):
     videos = []
     for line in result.stdout.strip().split("\n"):
         if line:
-            video_id, title = line.split("\t", 1)
-            videos.append((video_id, title))
+            try:
+                video_id, title = line.split("\t", 1)
+                videos.append((video_id, title))
+            except ValueError:
+                print(f"Error parsing line >>>\n{line}\n<<<")
     
     return videos
 
