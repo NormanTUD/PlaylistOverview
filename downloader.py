@@ -129,8 +129,14 @@ def download_comments(video_id):
     cur = conn.cursor()
 
     for comment in islice(comments, 50):  # Maximal 50 Kommentare pro Video speichern
+        votes = comment['votes'] or 0
+        try:
+            votes = int(votes)
+        except:
+            votes = 0
+
         cur.execute("INSERT OR IGNORE INTO comments (id, video_id, text, author, votes, time_parsed) VALUES (?, ?, ?, ?, ?, ?)",
-                    (comment['cid'], video_id, comment['text'], comment['author'], int(comment['votes'] or 0), comment['time_parsed']))
+                    (comment['cid'], video_id, comment['text'], comment['author'], votes, comment['time_parsed']))
 
         # Kommentar zur Volltextsuche hinzufügen
         cur.execute("INSERT OR REPLACE INTO fts_comments (id, text) VALUES (?, ?)", (comment['cid'], comment['text']))
