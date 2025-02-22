@@ -11,6 +11,11 @@ from rich.table import Table
 import argparse
 import random
 import time
+from pprint import pprint
+
+def dier(msg):
+    pprint(msg)
+    sys.exit(10)
 
 DB_NAME = "yt_data.db"
 console = Console()
@@ -249,9 +254,10 @@ def main():
             random.shuffle(videos)
 
         for video_id, _ in videos:
-            lang_str = args.lang.split(",")  # Sprachen als Liste speichern
+            langs = args.lang.split(",")  # Sprachen als Liste speichern
 
-            download_subtitles(video_id, lang_str)
+            for lang_str in langs:
+                download_subtitles(video_id, lang_str)
 
             task = download_comments(video_id, progress)
 
