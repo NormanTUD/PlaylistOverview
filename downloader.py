@@ -35,7 +35,7 @@ def download_subtitles(video_id, lang_str, progress):
 
     task = progress.add_task(f"Lade Subtitles für {video_id} ({lang_str})...")
 
-    if subtitles_exist(video_id, lang):
+    if subtitles_exist(video_id, lang_str):
         task = progress.add_task(f"Subtitles für {video_id} ({lang_str}) existiert bereits.")
         return task
 
