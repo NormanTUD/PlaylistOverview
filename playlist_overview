@@ -5,5 +5,5 @@
 
 	source .shellscript_functions
 
-	python3 test.py
+	python3 downloader.py $*
 }
