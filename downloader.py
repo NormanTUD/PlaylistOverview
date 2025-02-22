@@ -207,7 +207,7 @@ def subtitles_exist(video_id, lang):
     conn = sqlite3.connect(DB_NAME)
     cur = conn.cursor()
 
-    cur.execute("SELECT EXISTS(SELECT 1 FROM video_subtitles WHERE video_id = ? and lang = ?LIMIT 1)", (video_id, lang, ))
+    cur.execute("SELECT EXISTS(SELECT 1 FROM video_subtitles WHERE id = ? and lang = ?LIMIT 1)", (video_id, lang, ))
     exists = cur.fetchone()[0]
 
     conn.close()
