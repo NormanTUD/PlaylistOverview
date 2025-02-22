@@ -12,17 +12,54 @@ import argparse
 import random
 import time
 
+DB_NAME = "yt_data.db"
+console = Console()
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Extrahiere YouTube-Kommentare aus einer Playlist und speichere sie in einer SQLite-Datenbank.")
     parser.add_argument("playlist_url", help="Die URL der YouTube-Playlist")
     parser.add_argument("--shuffle", action="store_true", help="Kommentare in zufälliger Reihenfolge verarbeiten (Standard: False)")
+    parser.add_argument("--lang", type=str, default="de,en", help="Kommagetrennte Liste von Sprachcodes (z.B. 'de,en,fr')")
 
     return parser.parse_args()
 
 args = parse_args()
 
-DB_NAME = "yt_data.db"
-console = Console()
+def download_subtitles(video_id, langs):
+    """ Lädt Untertitel für ein YouTube-Video herunter und speichert sie in der Datenbank. """
+    lang_str = ",".join(langs)
+
+    # yt-dlp Befehl zum Abrufen der Untertitel im JSON-Format
+    command = [
+        "yt-dlp",
+        f"https://www.youtube.com/watch?v={video_id}",
+        "--write-auto-sub", "--skip-download",
+        "--sub-lang", lang_str,
+        "--sub-format", "json3",
+        "--print-json"
+    ]
+
+    try:
+        result = subprocess.run(command, capture_output=True, text=True, check=True)
+        video_data = json.loads(result.stdout)
+
+        conn = sqlite3.connect(DB_NAME)
+        cur = conn.cursor()
+
+        for subtitle in video_data.get("subtitles", {}).values():
+            for entry in subtitle:
+                lang = entry.get("ext", "")
+                url = entry.get("url", "")
+
+                # Speichere die Untertitel in der SQLite-Datenbank
+                execute_with_retry(cur, "INSERT OR REPLACE INTO video_subtitles (id, lang, title) VALUES (?, ?, ?)",
+                                   (video_id, lang, url))
+
+        conn.commit()
+        conn.close()
+
+    except subprocess.CalledProcessError as e:
+        print(f"Fehler beim Laden der Untertitel: {e}")
 
 def execute_with_retry(cur, query, params=(), delay=0.1):
     """Führt eine SQLite-Abfrage aus und versucht es erneut, falls die Datenbank gesperrt ist."""
@@ -70,8 +107,7 @@ def init_db():
         )
     """)
 
-    execute_with_retry(cur, "CREATE VIRTUAL TABLE IF NOT EXISTS fts_videos_en USING fts5(id, title)")
-    execute_with_retry(cur, "CREATE VIRTUAL TABLE IF NOT EXISTS fts_videos_de USING fts5(id, title)")
+    execute_with_retry(cur, "CREATE VIRTUAL TABLE IF NOT EXISTS video_subtitles USING fts5(id, lang, title)")
     
     execute_with_retry(cur, """
         CREATE TABLE IF NOT EXISTS comments (
@@ -149,8 +185,7 @@ def save_playlist(playlist_url, videos):
             execute_with_retry(cur, "INSERT OR IGNORE INTO playlist_videos (playlist_id, video_id, last_updated) VALUES (?, ?, ?)",
                         (playlist_id, video_id, datetime.utcnow().isoformat()))
 
-            execute_with_retry(cur, "INSERT OR REPLACE INTO fts_videos_en (id, title) VALUES (?, ?)", (video_id, title))
-            execute_with_retry(cur, "INSERT OR REPLACE INTO fts_videos_de (id, title) VALUES (?, ?)", (video_id, title))
+            execute_with_retry(cur, "INSERT OR REPLACE INTO video_subtitles (id, lang, text) VALUES (?, ?, ?)", (video_id, lang, title))
             
             progress.update(task, advance=1)
 
@@ -217,6 +252,10 @@ def main():
             random.shuffle(videos)
 
         for video_id, _ in videos:
+            langs = args.lang.split(",")  # Sprachen als Liste speichern
+
+            download_subtitles(video_id, langs)
+
             task = download_comments(video_id, progress)
 
             progress.remove_task(task)
