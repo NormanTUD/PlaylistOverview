@@ -24,7 +24,7 @@ args = parse_args()
 DB_NAME = "yt_data.db"
 console = Console()
 
-def execute_with_retry(cur, query, params=(), delay=1):
+def execute_with_retry(cur, query, params=(), delay=0.1):
     """Führt eine SQLite-Abfrage aus und versucht es erneut, falls die Datenbank gesperrt ist."""
     while True:
         try:
