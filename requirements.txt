@@ -1,3 +1,4 @@
 youtube-comment-downloader
 yt-dlp
 sqlite-utils
+rich
