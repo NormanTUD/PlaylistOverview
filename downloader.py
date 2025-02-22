@@ -8,6 +8,16 @@ from youtube_comment_downloader import YoutubeCommentDownloader
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn
 from rich.table import Table
+import argparse
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="Extrahiere YouTube-Kommentare aus einer Playlist und speichere sie in einer SQLite-Datenbank.")
+    parser.add_argument("playlist_url", help="Die URL der YouTube-Playlist")
+    parser.add_argument("--shuffle", action="store_true", help="Kommentare in zufälliger Reihenfolge verarbeiten (Standard: False)")
+
+    return parser.parse_args()
+
+args = parse_args()
 
 DB_NAME = "yt_data.db"
 console = Console()
@@ -174,11 +184,7 @@ def download_comments(video_id, progress):
     return task
 
 def main():
-    if len(sys.argv) < 2:
-        console.print("[bold red]Verwendung:[/] python3 yt_to_sqlite.py <playlist_url>")
-        sys.exit(1)
-
-    playlist_url = sys.argv[1]
+    playlist_url = args.playlist_url
     
     init_db()
     console.print(f"[green]✔ Datenbank initialisiert: {DB_NAME}[/]")
@@ -192,6 +198,9 @@ def main():
     console.print(f"[green]✔ Playlist gespeichert[/]")
 
     with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console, transient=True) as progress:
+        if args.shuffle:
+            random.shuffle(videos)
+
         for video_id, _ in videos:
             task = download_comments(video_id, progress)
 
