@@ -143,35 +143,35 @@ def comments_exist(video_id):
     conn.close()
     return bool(exists)
 
-def download_comments(video_id):
+def download_comments(video_id, progress):
     """ Lädt die Kommentare eines Videos herunter und speichert sie in der Datenbank. """
     if comments_exist(video_id):
-        console.print(f"[yellow]!!! Kommentare für {video_id} existieren bereits[/]")
-        return
+        task = progress.add_task(f"Kommentare bereits runtergeladen für Video {video_id}")
+        return task
 
     downloader = YoutubeCommentDownloader()
     comments = downloader.get_comments_from_url(f"https://www.youtube.com/watch?v={video_id}", sort_by=0)
 
     conn = sqlite3.connect(DB_NAME)
     cur = conn.cursor()
+    task = progress.add_task(f"Lade Kommentare für {video_id}...")
 
-    with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console) as progress:
-        task = progress.add_task(f"Lade Kommentare für {video_id}...", total=50)
+    for comment in comments:
+        try:
+            votes = int(comment['votes'] or 0)
+        except:
+            votes = 0
 
-        for comment in islice(comments, 50):
-            try:
-                votes = int(comment['votes'] or 0)
-            except:
-                votes = 0
-
-            cur.execute("INSERT OR IGNORE INTO comments (id, video_id, text, author, votes, time_parsed) VALUES (?, ?, ?, ?, ?, ?)",
-                        (comment['cid'], video_id, comment['text'], comment['author'], votes, comment['time_parsed']))
-            
-            cur.execute("INSERT OR REPLACE INTO fts_comments (id, text) VALUES (?, ?)", (comment['cid'], comment['text']))
-            progress.update(task, advance=1)
+        cur.execute("INSERT OR IGNORE INTO comments (id, video_id, text, author, votes, time_parsed) VALUES (?, ?, ?, ?, ?, ?)",
+                    (comment['cid'], video_id, comment['text'], comment['author'], votes, comment['time_parsed']))
+        
+        cur.execute("INSERT OR REPLACE INTO fts_comments (id, text) VALUES (?, ?)", (comment['cid'], comment['text']))
+        progress.update(task, advance=1)
 
     conn.commit()
     conn.close()
+
+    return task
 
 def main():
     if len(sys.argv) < 2:
@@ -191,8 +191,11 @@ def main():
     save_playlist(playlist_url, videos)
     console.print(f"[green]✔ Playlist gespeichert[/]")
 
-    for video_id, _ in videos:
-        download_comments(video_id)
+    with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console, transient=True) as progress:
+        for video_id, _ in videos:
+            task = download_comments(video_id, progress)
+
+            progress.remove_task(task)
 
     console.print("[bold green]✔ Alle Kommentare gespeichert[/]")
 
