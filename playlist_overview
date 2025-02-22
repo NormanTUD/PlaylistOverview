@@ -4,4 +4,6 @@
 	SCRIPT_DIR=$(dirname $(realpath "$0"))
 
 	source .shellscript_functions
+
+	python3 test.py
 }
