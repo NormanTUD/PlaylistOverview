@@ -33,10 +33,10 @@ args = parse_args()
 def download_subtitles(video_id, lang_str, progress):
     """ Lädt Untertitel für ein YouTube-Video herunter und speichert sie in der Datenbank. """
 
-    task = progress.add_task(f"Lade Subtitles für {video_id} ({lang})...")
+    task = progress.add_task(f"Lade Subtitles für {video_id} ({lang_str})...")
 
     if subtitles_exist(video_id, lang):
-        task = progress.add_task(f"Subtitles für {video_id} ({lang}) existiert bereits.")
+        task = progress.add_task(f"Subtitles für {video_id} ({lang_str}) existiert bereits.")
         return task
 
     # yt-dlp Befehl zum Abrufen der Untertitel im JSON-Format
