@@ -30,8 +30,14 @@ def parse_args():
 
 args = parse_args()
 
-def download_subtitles(video_id, lang_str):
+def download_subtitles(video_id, lang_str, progress):
     """ Lädt Untertitel für ein YouTube-Video herunter und speichert sie in der Datenbank. """
+
+    task = progress.add_task(f"Lade Subtitles für {video_id} ({lang})...")
+
+    if subtitles_exist(video_id, lang):
+        task = progress.add_task(f"Subtitles für {video_id} ({lang}) existiert bereits.")
+        return task
 
     # yt-dlp Befehl zum Abrufen der Untertitel im JSON-Format
     command_array = [
@@ -64,6 +70,8 @@ def download_subtitles(video_id, lang_str):
 
     except subprocess.CalledProcessError as e:
         print(f"Fehler beim Laden der Untertitel: {e}")
+
+    return task
 
 def execute_with_retry(cur, query, params=(), delay=0.1):
     """Führt eine SQLite-Abfrage aus und versucht es erneut, falls die Datenbank gesperrt ist."""
@@ -194,6 +202,17 @@ def save_playlist(playlist_url, videos):
     conn.commit()
     conn.close()
 
+def subtitles_exist(video_id, lang):
+    """ Überprüft, ob bereits Kommentare für das Video existieren. """
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+
+    cur.execute("SELECT EXISTS(SELECT 1 FROM video_subtitles WHERE video_id = ? and lang = ?LIMIT 1)", (video_id, lang, ))
+    exists = cur.fetchone()[0]
+
+    conn.close()
+    return bool(exists)
+
 def comments_exist(video_id):
     """ Überprüft, ob bereits Kommentare für das Video existieren. """
     conn = sqlite3.connect(DB_NAME)
@@ -257,7 +276,8 @@ def main():
             langs = args.lang.split(",")  # Sprachen als Liste speichern
 
             for lang_str in langs:
-                download_subtitles(video_id, lang_str)
+                task = download_subtitles(video_id, lang_str, progress)
+                progress.remove_task(task)
 
             task = download_comments(video_id, progress)
 
