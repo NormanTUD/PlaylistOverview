@@ -120,8 +120,24 @@ def save_playlist(playlist_url, videos):
     conn.commit()
     conn.close()
 
+def comments_exist(video_id):
+    """ Überprüft, ob bereits Kommentare für das Video existieren. """
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+
+    cur.execute("SELECT EXISTS(SELECT 1 FROM comments WHERE video_id = ? LIMIT 1)", (video_id,))
+    exists = cur.fetchone()[0]  # 1 = Kommentare existieren, 0 = keine vorhanden
+
+    conn.close()
+    return bool(exists)
+
 def download_comments(video_id):
     """ Lädt die Kommentare eines Videos herunter und speichert sie in der Datenbank. """
+
+    if comments_exist(video_id):
+        print(f"!!! Kommentare für {video_id} existieren bereits")
+        return
+
     downloader = YoutubeCommentDownloader()
     comments = downloader.get_comments_from_url(f"https://www.youtube.com/watch?v={video_id}", sort_by=0)  # 0 = Beste Kommentare zuerst
 
@@ -168,4 +184,8 @@ def main():
     print("[+] Alle Kommentare gespeichert")
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        print("CTRL-C pressed")
+        sys.exit(0)
