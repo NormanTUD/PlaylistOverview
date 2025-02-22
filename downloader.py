@@ -49,9 +49,13 @@ def download_subtitles(video_id, lang_str, progress):
         "--print-json"
     ]
 
+    print(" ".join(command_array))
+
     try:
         result = subprocess.run(command_array, capture_output=True, text=True, check=True)
         video_data = json.loads(result.stdout)
+
+        print(video_data)
 
         conn = sqlite3.connect(DB_NAME)
         cur = conn.cursor()
@@ -284,6 +288,9 @@ def main():
             progress.remove_task(task)
 
     console.print("[bold green]✔ Alle Kommentare gespeichert[/]")
+
+with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console, transient=True) as progress:
+    dier(download_subtitles("ho6JXE3EbZ8", "en", progress))
 
 if __name__ == "__main__":
     try:
