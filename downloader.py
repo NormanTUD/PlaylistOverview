@@ -214,7 +214,7 @@ def write_html_to_file(vids):
             video_id = v[0]
             title = v[1]
 
-            inner_html = f'{inner_html}\n<a href="{video_id}"><img src="https://i.ytimg.com/vi/{video_id}/hqdefault.jpg" width="150px"><div class="caption">{title}</div></a>'
+            inner_html = f'{inner_html}\n<a target="_blank" href="https://www.youtube.com/watch?v={video_id}"><img src="https://i.ytimg.com/vi/{video_id}/hqdefault.jpg" width="150px"><div class="caption">{title}</div></a>'
 
         if output_path and not os.path.exists(output_path):
             os.makedirs(output_path, exist_ok=True)  # Verzeichnis erstellen, falls nicht vorhanden
