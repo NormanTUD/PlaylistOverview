@@ -435,7 +435,6 @@
 		"git:git"
 		"python3:python3"
 		"gcc:gcc"
-		"resize:xterm"
 		"cat:coreutils"
 		"ls:coreutils"
 		"wget:wget"
