@@ -215,10 +215,9 @@ def main():
         if args.shuffle:
             random.shuffle(videos)
 
-        for video_id, _ in videos:
-            task = download_comments(video_id, progress)
-
-            progress.remove_task(task)
+        #for video_id, _ in videos:
+        #    task = download_comments(video_id, progress)
+        #    progress.remove_task(task)
 
     console.print("[bold green]✔ Alle Kommentare gespeichert[/]")
 
