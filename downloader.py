@@ -207,7 +207,7 @@ def write_html_to_file():
         with open(args.output_file, "w", encoding="utf-8") as f:
             f.write(html_file)
     else:
-    console.print(f"[green]--output_file not set[/]")
+        console.print(f"[green]--output_file not set[/]")
 
 def main():
     playlist_url = args.playlist_url
