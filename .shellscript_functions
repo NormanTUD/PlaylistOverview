@@ -593,4 +593,6 @@
 	fi
 
 	export PYTHONPATH=$VENV_DIR:$PYTHONPATH
+
+	pip install --upgrade yt-dlp
 }
