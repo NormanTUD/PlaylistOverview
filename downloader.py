@@ -210,7 +210,7 @@ def write_html_to_file(vids):
 
         inner_html = ""
 
-        for v in vids:
+        for v in reversed(vids):
             video_id = v[0]
             title = v[1]
 
