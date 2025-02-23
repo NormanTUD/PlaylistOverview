@@ -23,7 +23,7 @@ console = Console()
 def parse_args():
     parser = argparse.ArgumentParser(description="Extrahiere YouTube-Kommentare aus einer Playlist und speichere sie in einer SQLite-Datenbank.")
     parser.add_argument("playlist_url", help="Die URL der YouTube-Playlist")
-    parser.add_argument("--shuffle", action="store_true", help="Kommentare in zufälliger Reihenfolge verarbeiten (Standard: False)")
+    parser.add_argument("--output_file", help="Pfad zur Outputdatei")
 
     return parser.parse_args()
 
@@ -197,6 +197,18 @@ def download_comments(video_id, progress):
 
     return task
 
+def write_html_to_file():
+    if args.output_file:
+        output_path = os.path.dirname(args.output_file)  # Verzeichnis extrahieren
+
+        if output_path and not os.path.exists(output_path):
+            os.makedirs(output_path, exist_ok=True)  # Verzeichnis erstellen, falls nicht vorhanden
+
+        with open(args.output_file, "w", encoding="utf-8") as f:
+            f.write(html_file)
+    else:
+    console.print(f"[green]--output_file not set[/]")
+
 def main():
     playlist_url = args.playlist_url
     
@@ -210,16 +222,6 @@ def main():
 
     save_playlist(playlist_url, videos)
     console.print(f"[green]✔ Playlist gespeichert[/]")
-
-    with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}"), console=console, transient=True) as progress:
-        if args.shuffle:
-            random.shuffle(videos)
-
-        #for video_id, _ in videos:
-        #    task = download_comments(video_id, progress)
-        #    progress.remove_task(task)
-
-    console.print("[bold green]✔ Alle Kommentare gespeichert[/]")
 
 if __name__ == "__main__":
     try:
