@@ -131,6 +131,8 @@ def save_playlist(playlist_url, videos):
     conn = sqlite3.connect(DB_NAME)
     cur = conn.cursor()
 
+    vids = []
+
     execute_with_retry(cur, "INSERT OR IGNORE INTO playlists (name, last_updated) VALUES (?, ?)", 
                 (playlist_url, datetime.utcnow().isoformat()))
     execute_with_retry(cur, "UPDATE playlists SET last_updated = ? WHERE name = ?", 
@@ -153,8 +155,12 @@ def save_playlist(playlist_url, videos):
 
             progress.update(task, advance=1)
 
+            vids.append([video_id, title])
+
     conn.commit()
     conn.close()
+
+    return vids
 
 def comments_exist(video_id):
     """ Überprüft, ob bereits Kommentare für das Video existieren. """
@@ -197,12 +203,99 @@ def download_comments(video_id, progress):
 
     return task
 
-def write_html_to_file():
+def write_html_to_file(vids):
     if args.output_file:
         output_path = os.path.dirname(args.output_file)  # Verzeichnis extrahieren
 
+        inner_html = ""
+
+        for v in vids:
+            video_id = v[0]
+            title = v[1]
+
+            inner_html = f'{inner_html}\n<a href="{video_id}"><img src="https://i.ytimg.com/vi/{video_id}/hqdefault.jpg" width="150px"><div class="caption">{title}</div></a>'
+
         if output_path and not os.path.exists(output_path):
             os.makedirs(output_path, exist_ok=True)  # Verzeichnis erstellen, falls nicht vorhanden
+
+        html_file = """
+<head>
+<style>#images{ text-align:center; margin:50px auto; }
+#images a{margin:0px 20px; display:inline-block; text-decoration:none; color:black; }
+.caption { width: 150px; height: 80px; overflow-y: auto; }
+</style>
+<meta charset="UTF-8">
+</head>
+<div id="images">
+            """
+
+        html_file += inner_html
+
+        html_file += """
+</div>
+
+<center>
+<button id="random" onclick="player.loadVideoById(get_random_ytid(0))">Next random video</button><br><br>
+<div id="player"></div>
+<center>
+
+<script src="https://www.youtube.com/iframe_api"></script>
+
+<script>
+        var player;
+
+        var anchors = document.getElementsByTagName("a");
+        var youtube_ids = [];
+        for(var i = 0; i < anchors.length; i++){
+                youtube_ids.push(anchors[i].href.replace("https://youtube.com/watch?v=", ""));
+        }
+
+        function get_random_ytid (recursion) {
+                if(youtube_ids.length) {
+                        var index = Math.floor(Math.random()*youtube_ids.length);
+                        var item = youtube_ids[index];
+                        youtube_ids.splice(index, 1);
+                } else {
+                        if(recursion) {
+                                alert("Cannot get IDs");
+                        } else {
+                                for(var i = 0; i < anchors.length; i++){
+                                        youtube_ids.push(anchors[i].href.replace("https://youtube.com/watch?v=", ""));
+                                }
+                                item = get_random_ytid(1);
+                        }
+                }
+                return item;
+
+        }
+
+        function onPlayerReady(event) {
+                event.target.playVideo();
+        }
+
+        function onPlayerStateChange(event) {
+                if(event.data === YT.PlayerState.ENDED) {
+                        player.loadVideoById(get_random_ytid(0));
+                }
+        }
+
+        function onYouTubePlayerAPIReady() {
+                player = new YT.Player("player", {
+                        height: "390",
+                        width: "640",
+                        videoId: get_random_ytid(0),
+                        playerVars: { 
+                                "autoplay": 1,
+                                "controls": 1
+                        },
+                        events: {
+                                "onReady": onPlayerReady,
+                                "onStateChange": onPlayerStateChange
+                        }
+                });
+        }
+</script>
+        """
 
         with open(args.output_file, "w", encoding="utf-8") as f:
             f.write(html_file)
@@ -220,8 +313,10 @@ def main():
 
     show_video_table(videos)
 
-    save_playlist(playlist_url, videos)
+    vids = save_playlist(playlist_url, videos)
     console.print(f"[green]✔ Playlist gespeichert[/]")
+
+    write_html_to_file(vids)
 
 if __name__ == "__main__":
     try:
